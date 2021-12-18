@@ -20,45 +20,40 @@ fn main() {
     // vx = -1/2 +- sqrt((1/2)^2 + start_x). We then need to round up do end up inside the target.
     let first_vx = (-1.0 / 2.0 + (1.0 / 4.0 + 2.0 * start_x as f64).sqrt()).ceil() as i16;
 
+    let mut vy_by_t = vec![Vec::new(); 2 * last_vy as usize + 3];
+
+    for vy in first_vy..=last_vy {
+        // Quadratic equation to find the time we reach a certain point
+        // Use positive root. Negative root is extrapolating backwards in time
+        let tmp = (2.0 * vy as f64 + 1.0) / 2.0;
+        let first_t = (tmp + (tmp.powf(2.0) - 2.0 * end_y as f64).sqrt()).ceil() as usize;
+        let last_t = (tmp + (tmp.powf(2.0) - 2.0 * start_y as f64).sqrt()).floor() as usize;
+
+        for t in first_t..=last_t {
+            vy_by_t[t].push(vy);
+        }
+    }
+
+    let mut vx_by_vy = vec![0; (last_vy - first_vy + 1) as usize];
+
     let mut count = 0;
 
-    for vy_0 in first_vy..=last_vy {
-        // Time after which we return to y=0
-        let y_0_time = if vy_0 <= 0 { 0 } else { 2 * vy_0 + 1 };
+    for vx in first_vx..=end_x {
+        // Quadratic equation to find the time we reach a certain point
+        // Use subtraction root as that's when we reach the target the first time (both roots are positive if real)
+        let tmp = (2.0 * vx as f64 + 1.0) / 2.0;
+        let first_t = (tmp - (tmp.powf(2.0) - 2.0 * start_x as f64).sqrt()).ceil() as usize;
+        let last_t = tmp - (tmp.powf(2.0) - 2.0 * end_x as f64).sqrt();
+        // NaN (imaginary roots) means we never reach the end of the target area. Imaginary root for first_t would mean
+        // we never enter target area, but we've eliminated those cases already by calculating first_vx.
+        let last_t = if last_t.is_nan() { vy_by_t.len() - 1 } else { last_t.floor() as usize };
 
-        'x_loop: for vx_0 in first_vx.. {
-            let mut vx = std::cmp::max(0, vx_0 - y_0_time);
-            let mut vy = vy_0 - y_0_time;
-
-            // Take total distance probe will travel for given vx_0, and subtract the distance left to travel when at
-            // current vx.
-            let mut x = (vx_0.pow(2) + vx_0 - vx.pow(2) - vx) / 2;
-            let mut y = 0;
-
-            for t in y_0_time.. {
-                if x > end_x {
-                    if y > end_y || t == 1 {
-                        // We overshot the target. Either the probe flew above it, or it flew past it in the first step
-                        break 'x_loop;
-                    } else {
-                        // We missed the target
-                        continue 'x_loop;
-                    }
-                } else if y < start_y {
-                    // We missed the target
-                    continue 'x_loop;
-                } else if x >= start_x && y <= end_y {
-                    // We hit the target
+        for t in first_t..=last_t {
+            for &vy in &vy_by_t[t] {
+                if vx_by_vy[(vy - first_vy) as usize] != vx {
+                    vx_by_vy[(vy - first_vy) as usize] = vx;
                     count += 1;
-                    continue 'x_loop;
                 }
-
-                 x += vx;
-                 y += vy;
-                 vy -= 1;
-                 if vx > 0 {
-                    vx -= 1;
-                 }
             }
         }
     }
