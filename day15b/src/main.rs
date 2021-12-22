@@ -62,7 +62,9 @@ fn main() {
     let mut input = String::new();
     std::io::stdin().read_to_string(&mut input).unwrap();
 
-    let grid: Vec<Vec<_>> = input.lines().map(|line| line.chars().map(|c| c.to_digit(10).unwrap() as u32).collect()).collect();
+    let grid: Vec<Vec<_>> = input.lines().map(|line| {
+        line.chars().map(|c| c.to_digit(10).unwrap() as u32).collect()
+    }).collect();
     let grid: Vec<Vec<_>> = (0..5).flat_map(|i| grid.iter().map(move |line| {
         (0..5).flat_map(|j| line.iter().map(move |&danger| (danger - 1 + i + j) % 9 + 1)).collect()
     })).collect();

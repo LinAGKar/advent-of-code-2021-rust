@@ -17,7 +17,9 @@ fn main() {
     }
 
     let mut lines = input.lines();
-    let template: Vec<_> = lines.next().unwrap().chars().map(|c| elements[c as usize - 'A' as usize].unwrap()).collect();
+    let template: Vec<_> = lines.next().unwrap().chars().map(|c| {
+        elements[c as usize - 'A' as usize].unwrap()
+    }).collect();
 
     let mut counts = vec![0u64; element_count];
     for &element in &template {

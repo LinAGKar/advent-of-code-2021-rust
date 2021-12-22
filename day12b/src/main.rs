@@ -7,7 +7,14 @@ struct Cave {
     large: bool,
 }
 
-fn count_paths(caves: &Vec<Cave>, visited: &mut Vec<u8>, multi_visited: bool, pos: usize, start: usize, end: usize) -> u32 {
+fn count_paths(
+    caves: &Vec<Cave>,
+    visited: &mut Vec<u8>,
+    multi_visited: bool,
+    pos: usize,
+    start: usize,
+    end: usize,
+) -> u32 {
     let cave = &caves[pos];
     let second_visit = visited[pos] >= 1 && !cave.large;
 
