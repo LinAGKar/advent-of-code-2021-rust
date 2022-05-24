@@ -20,18 +20,6 @@ impl IndexMut<usize> for Vec4 {
     }
 }
 
-impl Mul<Mat4> for Vec4 {
-    type Output = Vec4;
-
-    fn mul(self, other: Mat4) -> Self::Output {
-        let mut result = Vec4 { elems: [0; 4] };
-        for i in 0..4 {
-            result[i] = (0..4).map(|j| self[j] * other[j][i]).sum();
-        }
-        result
-    }
-}
-
 impl Sub<Vec4> for Vec4 {
     type Output = Vec4;
 
@@ -60,10 +48,10 @@ impl Vec4 {
     fn to_translation_matrix(self) -> Mat4 {
         Mat4 {
             elems: [
-                [1, 0, 0, 0],
-                [0, 1, 0, 0],
-                [0, 0, 1, 0],
-                [self[0], self[1], self[2], 1],
+                [1, 0, 0, self[0]],
+                [0, 1, 0, self[1]],
+                [0, 0, 1, self[2]],
+                [0, 0, 0, 1],
             ],
         }
     }
@@ -110,11 +98,23 @@ impl Mul<Mat4> for Mat4 {
     }
 }
 
+impl Mul<Vec4> for Mat4 {
+    type Output = Vec4;
+
+    fn mul(self, other: Vec4) -> Self::Output {
+        let mut result = Vec4 { elems: [0; 4] };
+        for i in 0..4 {
+            result[i] = (0..4).map(|j| self[i][j] * other[j]).sum();
+        }
+        result
+    }
+}
+
 fn fit_scanner(scanner1: &Vec<Vec4>, scanner2: &Vec<Vec4>, orientation_matrices: &Vec<Mat4>) -> Option<Mat4> {
     // Works in scanner1's frame of reference
 
     for &m in orientation_matrices {
-        let rotated_scanner2: Vec<_> = scanner2.iter().map(move |&beacon| beacon * m).collect();
+        let rotated_scanner2: Vec<_> = scanner2.iter().map(move |&beacon| m * beacon).collect();
 
         for &beacon2 in &rotated_scanner2 {
             for &beacon1 in scanner1 {
@@ -135,7 +135,7 @@ fn fit_scanner(scanner1: &Vec<Vec4>, scanner2: &Vec<Vec4>, orientation_matrices:
                 }) && scanner1.iter().enumerate().all(|(n, &beacon)| {
                     scanner1_covered[n] || !(beacon - scanner2_center).in_range()
                 }) && scanner1_covered.into_iter().filter(|&i| i).count() >= 12 {
-                    return Some(m * diff.to_translation_matrix());
+                    return Some(diff.to_translation_matrix() * m);
                 }
             }
         }
@@ -255,7 +255,7 @@ fn main() {
     ];
 
     let orientation_matrices: Vec<_> = rotation_matrices.into_iter().flat_map(move |m1| {
-        facing_matrices.into_iter().map(move |m2| m1 * m2)
+        facing_matrices.into_iter().map(move |m2| m2 * m1)
     }).collect();
 
     let mut fitted_scanners = vec![0];
@@ -270,14 +270,14 @@ fn main() {
             }
 
             if let Some(orientation2) = fit_scanner(scanner1, scanner2, &orientation_matrices) {
-                scanner_orientations[m] = Some(orientation2 * scanner_orientations[n].unwrap());
+                scanner_orientations[m] = Some(scanner_orientations[n].unwrap() * orientation2);
                 fitted_scanners.push(m);
             }
         }
     }
 
     let centers: Vec<_> = scanner_orientations.into_iter().map(|orientation| {
-        Vec4 { elems: [0, 0, 0, 1] } * orientation.unwrap()
+        orientation.unwrap() * Vec4 { elems: [0, 0, 0, 1] }
     }).collect();
 
     println!("{}", centers.iter().enumerate().flat_map(|(n, &center1)| {
