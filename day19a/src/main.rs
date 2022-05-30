@@ -115,11 +115,10 @@ fn fit_scanner(scanner1: &Vec<Vec4>, scanner2: &Vec<Vec4>, orientation_matrices:
         for &beacon2 in &rotated_scanner2 {
             for &beacon1 in scanner1 {
                 let diff = beacon1 - beacon2;
-                let translated_scanner2: Vec<_> = rotated_scanner2.iter().map(move |&beacon| beacon + diff).collect();
                 let scanner2_center = Vec4 { elems: [0, 0, 0, 1] } + diff;
 
                 let mut scanner1_covered = vec![false; scanner1.len()];
-                if translated_scanner2.iter().all(|&beacon2| {
+                if rotated_scanner2.iter().map(move |&beacon| beacon + diff).all(|beacon2| {
                     if !beacon2.in_range() {
                         true
                     } else if let Some(index) = scanner1.iter().position(|&beacon1| beacon1 == beacon2) {
